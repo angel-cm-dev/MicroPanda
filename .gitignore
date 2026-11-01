@@ -1,0 +1,23 @@
+# dependencias y compilados
+node_modules/
+app/dist/
+__pycache__/
+*.pyc
+
+# voz descargada por setup-voice.ps1 (~1 GB) si alguien la pone dentro del proyecto
+app/voice/
+
+# ilustración original: no se publica hasta confirmar su licencia (ver NOTICE.md)
+personaje/source.webp
+
+# datos personales: la app los guarda en %USERPROFILE%\.micropanda, nunca aquí
+memoria.json
+acciones.log
+
+# sistema y editores
+*.log
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/

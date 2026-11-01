@@ -1,0 +1,77 @@
+{
+  "name": "micropanda",
+  "productName": "MicroPanda",
+  "version": "0.3.0",
+  "description": "MicroPanda: mascota de escritorio para Windows que te ayuda con tu PC por voz, en español latino",
+  "main": "main.js",
+  "license": "MIT",
+  "author": "Colaboradores de MicroPanda",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "check": "node scripts/check.js",
+    "test": "node --test test/tiempo.test.js test/commands.test.js",
+    "dist": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^45.2.1",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "org.micropanda.app",
+    "productName": "MicroPanda",
+    "files": [
+      "*.js",
+      "kokoro_tts.py",
+      "setup-voice.ps1",
+      "ocr.ps1",
+      "package.json",
+      "!test/**",
+      "!scripts/**"
+    ],
+    "asarUnpack": [
+      "kokoro_tts.py",
+      "setup-voice.ps1",
+      "ocr.ps1"
+    ],
+    "extraResources": [
+      {
+        "from": "../personaje",
+        "to": "personaje",
+        "filter": [
+          "*.html",
+          "*.js",
+          "*.png",
+          "!build_layers.py"
+        ]
+      }
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "../personaje/panda.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "MicroPanda"
+    }
+  },
+  "keywords": [
+    "desktop-pet",
+    "mascota",
+    "windows",
+    "electron",
+    "asistente",
+    "voz",
+    "whisper",
+    "ollama",
+    "espanol"
+  ],
+  "engines": {
+    "node": ">=20"
+  }
+}

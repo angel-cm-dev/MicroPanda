@@ -1,0 +1,35 @@
+# Al subir una etiqueta "v0.3.0" (git tag v0.3.0 && git push --tags) arma el instalador
+# y lo publica en GitHub Releases. La app avisa de la versión nueva si pones el repositorio en Ajustes.
+name: Publicar versión
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - name: Armar el instalador
+        run: npx electron-builder --win nsis --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - name: Publicar en Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/dist/*.exe
+          generate_release_notes: true

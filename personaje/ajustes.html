@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+<title>Ajustes de MicroPanda</title>
+<style>
+  :root { --bg:#F6F6FB; --card:#FFFFFF; --ink:#1B1A5E; --muted:#6B6E8C; --line:#E2E3F0; --accent:#030272; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14152A; --card:#1E2040; --ink:#E9E9F7; --muted:#9A9CBB; --line:#2E3060; --accent:#8E8DF5; } }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.45 "Segoe UI", system-ui, sans-serif; background:var(--bg); color:var(--ink); }
+  header { display:flex; align-items:center; gap:12px; padding:18px 20px 6px; }
+  header img { width:44px; height:44px; object-fit:contain; }
+  h1 { font-size:18px; margin:0; }
+  header p { margin:0; color:var(--muted); font-size:12px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:14px; margin:12px 16px; padding:6px 14px; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:10px 0 2px; }
+  label { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 0; border-top:1px solid var(--line); }
+  h2 + label { border-top:0; }
+  label small { display:block; color:var(--muted); font-size:12px; }
+  input[type=text], select { font:inherit; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:5px 8px; width:170px; }
+  input[type=checkbox] { width:18px; height:18px; accent-color:var(--accent); }
+  .mic-now { display:flex; align-items:center; gap:10px; padding:10px 0 6px; }
+  .mic-ico { font-size:22px; }
+  .mic-now b { display:block; } .mic-now small, .hint { display:block; color:var(--muted); font-size:12px; }
+  .hint { padding:0 0 10px; }
+  .meter-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--line); }
+  .meter-row button { font:inherit; font-size:13px; border:1px solid var(--line); background:var(--bg); color:var(--ink); border-radius:999px; padding:5px 12px; cursor:pointer; white-space:nowrap; }
+  .meter { flex:1; height:10px; border-radius:999px; background:var(--bg); border:1px solid var(--line); overflow:hidden; }
+  #meterBar { height:100%; width:0; background:linear-gradient(90deg, #2BB673, #FFD34E 70%, #E53950); transition:width .08s; }
+  .saved { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); background:var(--accent); color:#fff; padding:6px 14px; border-radius:999px; font-size:12px; opacity:0; transition:opacity .3s; }
+  .saved.on { opacity:1; }
+</style>
+</head>
+<body>
+<header>
+  <img src="panda.png" alt="">
+  <div><h1>Ajustes de MicroPanda</h1><p>Los cambios se guardan solos</p></div>
+</header>
+
+<section>
+  <h2>Él</h2>
+  <label><span>Su nombre<small>Responde a este nombre y a "Panda"</small></span><input type="text" data-k="wakeName" maxlength="15"></label>
+  <label><span>Personalidad</span><select data-k="personality"><option value="tierno">🥰 Tierno</option><option value="gracioso">😜 Gracioso</option><option value="profesional">💼 Profesional</option><option value="serio">😐 Serio</option></select></label>
+  <label><span>Tamaño</span><select data-k="scale" data-num><option value="0.75">Pequeño</option><option value="1">Normal</option><option value="1.25">Grande</option><option value="1.5">Muy grande</option></select></label>
+  <label><span>Ánimo automático<small>Decide solo cómo se siente</small></span><input type="checkbox" data-k="autoMood"></label>
+  <label><span>Pasear solo por la barra<small>De vez en cuando camina unos segundos</small></span><input type="checkbox" data-k="walkAuto"></label>
+</section>
+
+<section>
+  <h2>Micrófono</h2>
+  <div class="mic-now"><span class="mic-ico">🎙️</span><div><b id="mic-active">Aún no lo ha usado</b><small id="mic-note">Así lo llama Windows</small></div></div>
+  <label><span>Usar</span><select data-k="micId" id="micSel"><option value="">El predeterminado de Windows</option></select></label>
+  <div class="meter-row">
+    <button type="button" id="micTest">Probar micrófono</button>
+    <div class="meter"><div id="meterBar"></div></div>
+  </div>
+  <small class="hint" id="meterHint">Habla después de apretar "Probar": la barra debe moverse. Si casi no se mueve, sube la sensibilidad.</small>
+</section>
+
+<section>
+  <h2>Voz y oído</h2>
+  <label><span>Escuchar su nombre</span><input type="checkbox" data-k="wakeWord"></label>
+  <label><span>Responder en voz alta</span><input type="checkbox" data-k="speakReplies"></label>
+  <label><span>Seguir escuchando después de responder</span><input type="checkbox" data-k="followUp"></label>
+  <label><span>Sonido al oír su nombre</span><input type="checkbox" data-k="beep"></label>
+  <label><span>Sensibilidad</span><select data-k="sensitivity"><option value="low">Baja (con ruido)</option><option value="normal">Normal</option><option value="high">Alta (hablas bajito)</option></select></label>
+  <label><span>Velocidad de la voz</span><select data-k="voiceSpeed" data-num><option value="0.85">Despacio</option><option value="1">Normal</option><option value="1.15">Rápida</option><option value="1.3">Muy rápida</option></select></label>
+  <label><span>Voz</span><select data-k="voice"><option value="ef_dora">Dora (mujer)</option><option value="em_alex">Alex (hombre)</option><option value="em_santa">Santa (hombre)</option></select></label>
+  <label><span>Procesador<small id="device-now"></small></span><select data-k="device"><option value="auto">Automático</option><option value="gpu">GPU</option><option value="cpu">CPU</option></select></label>
+</section>
+
+<section>
+  <h2>Inteligencia</h2>
+  <label><span>Modelo de Ollama</span><select data-k="model" id="model"><option value="">Automático</option></select></label>
+  <label><span>Modo solo charla<small>No hace cambios en tu PC</small></span><input type="checkbox" data-k="chatOnly"></label>
+</section>
+
+<section>
+  <h2>Modelo en la nube (opcional)</h2>
+  <label><span>Usar la nube<small>Para preguntas difíciles. Si falla, usa Ollama</small></span><select data-k="cloudProvider"><option value="off">Apagado (solo local)</option><option value="anthropic">Anthropic (Claude)</option><option value="openai">Compatible con OpenAI</option></select></label>
+  <label><span>Modelo<small>Ej. claude-haiku-5-5</small></span><input type="text" data-k="cloudModel" maxlength="80" placeholder="claude-haiku-5-5"></label>
+  <label><span>Dirección de la API<small>Solo para "compatible con OpenAI"</small></span><input type="text" data-k="cloudUrl" maxlength="200" placeholder="https://api.openai.com/v1"></label>
+  <label><span>Clave de la API<small id="key-state">Se guarda cifrada con tu cuenta de Windows</small></span><input type="password" id="cloudKey" maxlength="300" placeholder="pega tu clave"></label>
+</section>
+
+<section>
+  <h2>Tú</h2>
+  <label><span>Tu ciudad<small>Para el clima</small></span><input type="text" data-k="city" maxlength="40" placeholder="Lima"></label>
+  <label><span>Tu moneda<small>Para el tipo de cambio</small></span><select data-k="currency"><option value="PEN">Soles (PEN)</option><option value="MXN">Pesos mexicanos</option><option value="COP">Pesos colombianos</option><option value="ARS">Pesos argentinos</option><option value="CLP">Pesos chilenos</option><option value="BOB">Bolivianos</option><option value="UYU">Pesos uruguayos</option><option value="GTQ">Quetzales</option><option value="DOP">Pesos dominicanos</option><option value="EUR">Euros</option><option value="USD">Dólares</option></select></label>
+  <label><span>Pausas activas y agua</span><input type="checkbox" data-k="health"></label>
+  <label><span>Iniciar con Windows</span><input type="checkbox" data-k="openAtLogin"></label>
+  <label><span>Tu calendario (.ics)<small>Google Calendar: "dirección secreta en formato iCal". Vacío = Outlook</small></span><input type="text" data-k="icsUrl" maxlength="500" placeholder="https://calendar.google.com/…/basic.ics"></label>
+</section>
+
+<section>
+  <h2>Actualizaciones</h2>
+  <label><span>Repositorio en GitHub<small id="version"></small></span><input type="text" data-k="updateRepo" maxlength="100" placeholder="usuario/micropanda"></label>
+</section>
+
+<div class="saved" id="saved">Guardado ✓</div>
+
+<script>
+const api = window.micropanda;
+const savedEl = document.getElementById('saved');
+let t = 0;
+function flash() { savedEl.classList.add('on'); clearTimeout(t); t = setTimeout(() => savedEl.classList.remove('on'), 1200); }
+
+// ---------- micrófono: cuál usa, elegir otro y medidor de prueba ----------
+const micSel = document.getElementById('micSel');
+function showMics({ mics = [], micActive = '' }) {
+  document.getElementById('mic-active').textContent = micActive || 'Aún no lo ha usado';
+  document.getElementById('mic-note').textContent = micActive ? 'En uso ahora (así lo llama Windows)' : 'Se verá aquí cuando escuche "Panda" o le hables';
+  const chosen = micSel.value;
+  for (const o of [...micSel.options].slice(1)) o.remove();
+  for (const m of mics) micSel.add(new Option(m.label || 'Micrófono sin nombre', m.id));
+  micSel.value = [...micSel.options].some((o) => o.value === chosen) ? chosen : '';
+}
+api.onMicInfo(showMics);
+
+let test = null;
+async function stopTest() {
+  if (!test) return;
+  cancelAnimationFrame(test.raf); clearTimeout(test.timer);
+  test.stream.getTracks().forEach((t) => t.stop()); test.ctx.close();
+  test = null;
+  document.getElementById('meterBar').style.width = '0';
+  document.getElementById('micTest').textContent = 'Probar micrófono';
+}
+document.getElementById('micTest').addEventListener('click', async () => {
+  if (test) return stopTest();
+  const hint = document.getElementById('meterHint');
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, ...(micSel.value ? { deviceId: { exact: micSel.value } } : {}) } });
+    const ctx = new AudioContext();
+    const an = ctx.createAnalyser(); an.fftSize = 1024;
+    ctx.createMediaStreamSource(stream).connect(an);
+    const data = new Float32Array(an.fftSize);
+    let peak = 0;
+    test = { stream, ctx, raf: 0, timer: setTimeout(stopTest, 15000) };
+    hint.textContent = `Probando: ${stream.getAudioTracks()[0].label}. Habla…`;
+    document.getElementById('micTest').textContent = 'Detener';
+    const tick = () => {
+      an.getFloatTimeDomainData(data);
+      let s = 0; for (const v of data) s += v * v;
+      const level = Math.min(1, Math.sqrt(s / data.length) * 9);
+      peak = Math.max(peak * 0.995, level);
+      document.getElementById('meterBar').style.width = `${Math.round(level * 100)}%`;
+      if (peak > 0.25) hint.textContent = `✅ Te escucho bien por: ${stream.getAudioTracks()[0].label}`;
+      test.raf = requestAnimationFrame(tick);
+    };
+    tick();
+  } catch {
+    hint.textContent = '❌ No pude abrir ese micrófono. Revisa Configuración de Windows › Privacidad › Micrófono.';
+  }
+});
+micSel.addEventListener('change', () => { if (test) stopTest(); });
+addEventListener('beforeunload', stopTest);
+
+api.getSettings().then(({ settings, models, status, version, mics, micActive }) => {
+  showMics({ mics, micActive });
+  document.getElementById('version').textContent = `Versión ${version}`;
+  const keyEl = document.getElementById('cloudKey');
+  if (settings.cloudKeySet) keyEl.placeholder = '•••••• (guardada; escribe otra para cambiarla)';
+  keyEl.addEventListener('change', async () => {
+    if (await api.setSetting('cloudKey', keyEl.value.trim())) { keyEl.value = ''; keyEl.placeholder = '•••••• (guardada)'; flash(); }
+  });
+  const sel = document.getElementById('model');
+  for (const m of models) sel.add(new Option(m, m));
+  document.getElementById('device-now').textContent = status.gpu ? `Ahora: GPU${status.gpuName ? ' · ' + status.gpuName : ''}` : 'Ahora: CPU';
+  for (const el of document.querySelectorAll('[data-k]')) {
+    const k = el.dataset.k, v = settings[k];
+    if (el.type === 'checkbox') el.checked = !!v; else el.value = v ?? '';
+    el.addEventListener('change', async () => {
+      let val = el.type === 'checkbox' ? el.checked : el.value.trim();
+      if ('num' in el.dataset) val = Number(val);
+      if (k === 'wakeName' && !val) val = 'panda';
+      if (await api.setSetting(k, val)) flash();
+    });
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+# Avisa cuando hay versiones nuevas de Electron, electron-builder y de las acciones de GitHub
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /app
+    schedule:
+      interval: monthly
+    groups:
+      electron:
+        patterns: ["electron", "electron-builder"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

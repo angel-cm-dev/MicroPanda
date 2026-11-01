@@ -1,0 +1,7 @@
+# Finales de línea LF en el repositorio; PowerShell con CRLF para Windows
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.png binary
+*.webp binary
+*.wav binary
+*.ico binary

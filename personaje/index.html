@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+
+<title>MicroPanda</title>
+<style>
+  :root { --bg:#F4F5FA; --ink:#1B1A5E; --muted:#6B6E8C; --chip:#FFFFFF; --line:#DDDEEB; --accent:#1B1A5E; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14152A; --ink:#E9E9F7; --muted:#9A9CBB; --chip:#1E2040; --line:#2E3060; --accent:#4C4BC9; } }
+  * { box-sizing:border-box; }
+  html, body { margin:0; min-height:100%; }
+  body { background:var(--bg); color:var(--ink); font-family:"Segoe UI", system-ui, sans-serif; display:flex; flex-direction:column; align-items:center; }
+  h1 { margin:24px 0 0; font-size:28px; }
+  p { margin:4px 0 0; color:var(--muted); font-size:14px; }
+  svg { width:min(520px, calc(100vw - 32px)); height:auto; display:block; margin-top:4px; overflow:visible; }
+  .moods { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; max-width:640px; padding:8px 16px 32px; }
+  .moods button { font:inherit; font-size:14px; font-weight:600; padding:8px 14px; border-radius:999px; border:1px solid var(--line);
+                  background:var(--chip); color:var(--ink); cursor:pointer; transition:transform .15s; }
+  .moods button:hover { transform:translateY(-2px); }
+  .moods button[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .moods .demo { border-style:dashed; }
+
+  /* modo escritorio (app): solo el panda sobre fondo transparente */
+  body.desktop { background:transparent; overflow:hidden; height:100vh; user-select:none; justify-content:flex-end; }
+  body.desktop h1, body.desktop p, body.desktop .moods { display:none; }
+  body.desktop svg { width:100vw; height:275px; flex:none; margin:0; cursor:grab; }
+  body.desktop svg:active { cursor:grabbing; }
+
+  /* globo de diálogo (solo en la app) */
+  #chat { display:none; }
+  body.desktop.chat-open #chat { display:flex; flex-direction:column; justify-content:flex-end; width:100vw; height:170px; padding:8px 12px 10px; }
+  .bubble { position:relative; background:#FFFFFF; color:#1B1A5E; border:3px solid #030272; border-radius:18px; padding:10px 12px 8px;
+            font-size:13px; line-height:1.35; box-shadow:0 6px 16px rgba(3,2,114,.18); }
+  .bubble::after { content:''; position:absolute; left:50%; bottom:-13px; transform:translateX(-50%);
+                   border:10px solid transparent; border-top-color:#030272; border-bottom:0; }
+  .bubble .close { position:absolute; top:4px; right:8px; border:0; background:none; color:#6B6E8C; font-size:16px; cursor:pointer; }
+  #reply { min-height:18px; max-height:58px; overflow:auto; padding-right:14px; }
+  #confirmBox { display:flex; gap:8px; margin-top:6px; }
+  #confirmBox[hidden] { display:none; }
+  #confirmBox button, #ask button { font:inherit; font-weight:700; border:0; border-radius:999px; padding:5px 14px; cursor:pointer; }
+  #confirmBox .yes { background:#030272; color:#fff; } #confirmBox .no { background:#E4E5F2; color:#1B1A5E; }
+  #ask { display:flex; gap:6px; margin-top:8px; }
+  #q { flex:1; min-width:0; font:inherit; border:2px solid #D7D8EA; border-radius:999px; padding:5px 12px; outline:none; color:#1B1A5E; }
+  #q:focus { border-color:#030272; }
+  #ask button { background:#030272; color:#fff; padding:5px 11px; }
+  #ask #mic { background:#E4E5F2; }
+  #ask #mic.on { background:#E53950; animation:rec 1s ease-in-out infinite; }
+  #ask button[hidden] { display:none; }
+  @keyframes rec { 50% { transform:scale(1.12); } }
+
+  /* indicador del micrófono: verde = esperando su nombre, rojo = grabando, gris = apagado */
+  #micDot { display:none; }
+  body.desktop #micDot { display:block; position:fixed; left:22px; bottom:236px; width:11px; height:11px; border-radius:50%;
+                         border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.25); background:transparent; opacity:0; transition:opacity .3s; }
+  body.desktop #micDot.on { background:#2BB673; opacity:.85; }
+  body.desktop #micDot.rec { background:#E53950; opacity:1; animation:rec 1s ease-in-out infinite; }
+  body.desktop #micDot.muted { background:#8A8CA8; opacity:.9; }
+
+  /* efectos */
+  .fx { display:none; }
+  .fx.on { display:inline; }
+  .fx * { transform-box:fill-box; transform-origin:center; }
+  .float { animation:float 2.4s ease-in-out infinite; }
+  .float.d1 { animation-delay:.8s; } .float.d2 { animation-delay:1.6s; }
+  @keyframes float { 0% { opacity:0; transform:translate(0,10px) scale(.6); } 25%,70% { opacity:1; } 100% { opacity:0; transform:translate(12px,-60px) scale(1.1); } }
+  .pulse { animation:pulse 1.2s ease-in-out infinite; }
+  .pulse.d1 { animation-delay:.2s; } .pulse.d2 { animation-delay:.4s; }
+  @keyframes pulse { 0%,100% { opacity:.3; transform:translateY(0); } 50% { opacity:1; transform:translateY(-4px); } }
+  .pop { animation:pop .5s cubic-bezier(.3,1.6,.5,1) both, wobble 1.4s .5s ease-in-out infinite; }
+  @keyframes pop { from { transform:scale(0); } to { transform:scale(1); } }
+  @keyframes wobble { 0%,100% { transform:rotate(-6deg); } 50% { transform:rotate(6deg); } }
+  .drip { animation:drip 1.8s ease-in infinite; }
+  @keyframes drip { 0% { opacity:0; transform:translateY(-4px) scale(.5); } 20% { opacity:1; transform:translateY(0) scale(1); } 100% { opacity:0; transform:translateY(34px) scale(.9); } }
+</style>
+</head>
+<body>
+<h1>MicroPanda</h1>
+<p>Elige un estado de ánimo · en "Tranquilo" te sigue con la mirada</p>
+
+<div id="chat">
+  <div class="bubble">
+    <button class="close" id="chatClose" aria-label="Cerrar">×</button>
+    <div id="reply"></div>
+    <div id="confirmBox" hidden><button class="yes" id="yes">Sí</button><button class="no" id="no">No</button></div>
+    <form id="ask"><input id="q" placeholder="Pídeme algo…" autocomplete="off" maxlength="300"><button type="button" id="mic" aria-label="Hablar" hidden>🎤</button><button aria-label="Enviar">➤</button></form>
+  </div>
+</div>
+
+<svg id="panda" viewBox="80 40 840 920" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MicroPanda">
+  <defs><clipPath id="face"><path id="faceClip"/></clipPath></defs>
+  <g id="all">
+    <!-- pata para saludar (solo aparece en el gesto "wave") -->
+    <g id="paw" style="display:none" stroke="#030272" stroke-width="6" stroke-linejoin="round">
+      <path d="M722 830 Q760 700 774 630 L830 632 Q830 730 790 830 Z" fill="#6E7096"/>
+      <ellipse cx="802" cy="606" rx="38" ry="42" fill="#FFFFFF"/>
+      <ellipse cx="802" cy="618" rx="14" ry="12" fill="#030272" stroke="none"/>
+      <circle cx="782" cy="592" r="6" fill="#030272" stroke="none"/>
+      <circle cx="802" cy="584" r="6" fill="#030272" stroke="none"/>
+      <circle cx="822" cy="592" r="6" fill="#030272" stroke="none"/>
+    </g>
+    <image href="body.png" width="1000" height="1000"/>
+    <g id="head">
+      <image href="head.png" width="1000" height="1000"/>
+      <g id="blush"></g>
+      <g clip-path="url(#face)"><g id="eyes"></g></g>
+      <g id="mouth"></g>
+      <g id="fx"></g>
+      <g id="hats" stroke="#030272" stroke-width="5" stroke-linejoin="round">
+        <g id="hat-santa" style="display:none">
+          <path d="M402 126 C420 70 470 48 530 50 C565 52 585 66 590 84 L568 92 C552 78 530 76 512 84 C540 100 556 112 560 126 Z" fill="#E0323F"/>
+          <rect x="392" y="110" width="176" height="30" rx="15" fill="#FFFFFF"/>
+          <circle cx="584" cy="94" r="14" fill="#FFFFFF"/>
+        </g>
+        <g id="hat-party" style="display:none">
+          <path d="M438 128 L480 38 L522 128 Z" fill="#4C4BC9"/>
+          <path d="M452 98 L508 98 M466 68 L494 68" stroke="#FFD34E" stroke-width="9"/>
+          <circle cx="480" cy="36" r="10" fill="#FF8FA3"/>
+        </g>
+        <g id="hat-witch" style="display:none">
+          <ellipse cx="480" cy="126" rx="104" ry="15" fill="#5B3A8E"/>
+          <path d="M424 122 L468 50 Q478 36 492 48 L536 122 Z" fill="#5B3A8E"/>
+          <rect x="432" y="104" width="96" height="14" fill="#FF8A1F"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>
+<div id="micDot" title="Micrófono"></div>
+<nav class="moods" id="moods"></nav>
+
+<script src="rig.js"></script>
+<script>
+const DESKTOP = new URLSearchParams(location.search).has('desktop');
+if (DESKTOP) document.body.classList.add('desktop');
+const rig = window.RIG;
+const NS = 'http://www.w3.org/2000/svg';
+const NAVY = rig.navy, PATCH = '#5E5F83', FACE = '#EFEFEF', RED = '#E53950', PINK = '#FF8FA3';
+const $ = (id) => document.getElementById(id);
+function el(tag, attrs, parent, text) {
+  const n = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  if (text) n.textContent = text;
+  parent.append(n);
+  return n;
+}
+const show = (n, on) => { n.style.display = on ? '' : 'none'; };
+
+// ---------- estados de ánimo ----------
+// head: [inclinación°, desplazamiento y] · look: hacia dónde miran los ojos (null = sigue el cursor)
+const MOODS = {
+  idle:      { label: '😐 Tranquilo',   eyes: 'open',   lid: null,   mouth: null,    blush: 0,   head: [0, 0],   look: null },
+  happy:     { label: '😊 Feliz',       eyes: 'happy',  lid: null,   mouth: 'open',  blush: .7,  head: [0, -3],  look: [0, 0], wiggle: 3 },
+  love:      { label: '😍 Encantado',   eyes: 'heart',  lid: null,   mouth: 'smile', blush: 1,   head: [0, 0],   look: [0, 0], sway: 4, fx: 'hearts' },
+  surprised: { label: '😮 Sorprendido', eyes: 'open',   lid: null,   mouth: 'o',     blush: 0,   head: [0, -7],  look: [0, 0], eyeScale: 1.18, fx: 'alert' },
+  thinking:  { label: '🤔 Pensando',    eyes: 'open',   lid: null,   mouth: 'flat',  blush: 0,   head: [6, 0],   look: [6, -1], fx: 'dots' },
+  focused:   { label: '💻 Concentrado', eyes: 'open',   lid: 'flat', mouth: 'flat',  blush: 0,   head: [0, 5],   look: [0, 4] },
+  annoyed:   { label: '😤 Molesto',     eyes: 'open',   lid: 'angry',mouth: 'frown', blush: 0,   head: [-2, 2],  look: [0, 1], fx: 'steam' },
+  sad:       { label: '😢 Triste',      eyes: 'open',   lid: 'sad',  mouth: 'frown', blush: 0,   head: [-3, 9],  look: [0, 4], fx: 'tear' },
+  sleepy:    { label: '😴 Dormido',     eyes: 'closed', lid: null,   mouth: 'small', blush: .35, head: [5, 10],  look: [0, 0], fx: 'zzz', slow: true },
+};
+
+// ---------- ojos (recortados bajo el borde de la capucha) ----------
+const rim = (x) => rig.rim.y0 + rig.rim.k * (x - rig.rim.cx) ** 2 + 1.5;
+let d = 'M300 ' + rim(300);
+for (let x = 300; x <= 660; x += 6) d += ` L${x} ${rim(x).toFixed(1)}`;
+$('faceClip').setAttribute('d', d + ' L660 520 L300 520 Z');
+
+const heartPath = (cx, cy, s) =>
+  `M${cx} ${cy + s * .9} C${cx - s * 1.5} ${cy - s * .1} ${cx - s * .9} ${cy - s * 1.3} ${cx} ${cy - s * .5} ` +
+  `C${cx + s * .9} ${cy - s * 1.3} ${cx + s * 1.5} ${cy - s * .1} ${cx} ${cy + s * .9} Z`;
+
+const eyes = rig.eyes.map((e, i) => {
+  const side = i === 0 ? -1 : 1;            // -1 = ojo izquierdo (su lado interno es la derecha)
+  const g = el('g', {}, $('eyes'));
+  const open = el('g', {}, g);
+  const look = el('g', {}, open);
+  el('ellipse', { cx: e.cx, cy: e.cy, rx: e.rx, ry: e.ry, fill: NAVY }, look);
+  el('ellipse', { cx: e.hx, cy: e.hy, rx: e.hrx, ry: e.hry, fill: '#FFFFFF' }, look);
+  const top = e.cy - e.ry - 8, w = e.rx + 8;
+  const inner = (y) => [e.cx - side * w, y], outer = (y) => [e.cx + side * w, y];
+  const lidPath = (yIn, yOut) => {
+    const [ix, iy] = inner(yIn), [ox, oy] = outer(yOut);
+    return `M${ix} ${top} L${ox} ${top} L${ox} ${oy} L${ix} ${iy} Z`;
+  };
+  const lids = {
+    flat:  lidPath(e.cy - e.ry * .25, e.cy - e.ry * .25),
+    sad:   lidPath(e.cy - e.ry * .75, e.cy - e.ry * .05),
+    angry: lidPath(e.cy - e.ry * .05, e.cy - e.ry * .7),
+  };
+  const lid = el('path', { fill: PATCH }, open);
+  const lidLine = el('path', { stroke: NAVY, 'stroke-width': 5, 'stroke-linecap': 'round', fill: 'none' }, open);
+  const happy = el('path', { d: `M${e.cx - 20} ${e.cy + 10} Q${e.cx} ${e.cy - 20} ${e.cx + 20} ${e.cy + 10}`, stroke: NAVY, 'stroke-width': 8, fill: 'none', 'stroke-linecap': 'round' }, g);
+  const closed = el('path', { d: `M${e.cx - 20} ${e.cy + 2} Q${e.cx} ${e.cy + 20} ${e.cx + 20} ${e.cy + 2}`, stroke: NAVY, 'stroke-width': 8, fill: 'none', 'stroke-linecap': 'round' }, g);
+  const heart = el('path', { d: heartPath(e.cx, e.cy + 6, 17), fill: RED, stroke: NAVY, 'stroke-width': 5, 'stroke-linejoin': 'round' }, g);
+  return { e, side, g, open, look, lid, lidLine, lids, happy, closed, heart };
+});
+
+function setLid(eye, kind) {
+  show(eye.lid, !!kind); show(eye.lidLine, !!kind);
+  if (!kind) return;
+  eye.lid.setAttribute('d', eye.lids[kind]);
+  const pts = eye.lids[kind].match(/-?\d+(\.\d+)?/g).map(Number);
+  eye.lidLine.setAttribute('d', `M${pts[4]} ${pts[5]} L${pts[6]} ${pts[7]}`);
+}
+
+// ---------- boca: se tapa la original y se dibuja la nueva ----------
+const M = $('mouth');
+const cover = el('rect', { x: 437, y: 428, width: 80, height: 35, rx: 12, fill: FACE }, M);
+const stem = el('path', { d: 'M473 424 V444', stroke: NAVY, 'stroke-width': 7, 'stroke-linecap': 'round' }, M);
+const line = { stroke: NAVY, 'stroke-width': 6, fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' };
+const mouths = {
+  smile: el('path', { d: 'M448 442 Q460 456 473 444 Q486 456 498 442', ...line }, M),
+  open:  el('g', {}, M),
+  o:     el('ellipse', { cx: 473, cy: 452, rx: 9, ry: 11, fill: NAVY }, M),
+  flat:  el('path', { d: 'M456 450 H490', ...line }, M),
+  frown: el('path', { d: 'M452 458 Q473 438 494 458', ...line }, M),
+  small: el('ellipse', { cx: 473, cy: 451, rx: 5, ry: 6, fill: NAVY }, M),
+};
+el('path', { d: 'M449 441 Q473 474 497 441 Z', fill: NAVY, 'stroke-linejoin': 'round' }, mouths.open);
+el('path', { d: 'M461 456 Q473 468 485 456 Q473 450 461 456 Z', fill: PINK }, mouths.open);
+
+// ---------- rubor ----------
+const blushEls = [[365, 466], [598, 466]].map(([cx, cy]) => el('ellipse', { cx, cy, rx: 24, ry: 8, fill: PINK }, $('blush')));
+
+// ---------- efectos ----------
+const FX = {};
+const fxGroup = (name) => (FX[name] = el('g', { class: 'fx' }, $('fx')));
+{
+  const g = fxGroup('hearts');
+  [[560, 170, ''], [610, 200, 'd1'], [520, 200, 'd2']].forEach(([x, y, c]) =>
+    el('path', { d: heartPath(x, y, 12), fill: RED, stroke: NAVY, 'stroke-width': 4, class: `float ${c}` }, g));
+}
+{
+  const g = fxGroup('alert');
+  const p = el('g', { class: 'pop' }, g);
+  el('circle', { cx: 690, cy: 170, r: 26, fill: '#FFC83D', stroke: NAVY, 'stroke-width': 6 }, p);
+  el('rect', { x: 686, y: 154, width: 8, height: 20, rx: 4, fill: NAVY }, p);
+  el('circle', { cx: 690, cy: 184, r: 4.5, fill: NAVY }, p);
+}
+{
+  const g = fxGroup('dots');
+  el('circle', { cx: 650, cy: 222, r: 7, fill: '#FFFFFF', stroke: NAVY, 'stroke-width': 4 }, g);
+  el('circle', { cx: 668, cy: 196, r: 11, fill: '#FFFFFF', stroke: NAVY, 'stroke-width': 4 }, g);
+  el('rect', { x: 668, y: 128, width: 96, height: 54, rx: 27, fill: '#FFFFFF', stroke: NAVY, 'stroke-width': 6 }, g);
+  [694, 716, 738].forEach((x, i) => el('circle', { cx: x, cy: 155, r: 6, fill: NAVY, class: `pulse d${i}` }, g));
+}
+{
+  const g = fxGroup('zzz');
+  [[640, 210, 30, ''], [660, 200, 24, 'd1'], [675, 190, 20, 'd2']].forEach(([x, y, s, c]) =>
+    el('text', { x, y, 'font-size': s, 'font-weight': 800, 'font-family': 'Segoe UI, sans-serif', fill: NAVY, class: `float ${c}` }, g, 'z'));
+}
+{
+  const g = fxGroup('tear');
+  el('path', { d: 'M372 404 Q382 420 372 428 Q362 420 372 404 Z', fill: '#7CC8FF', stroke: NAVY, 'stroke-width': 3, class: 'drip' }, g);
+}
+{
+  const g = fxGroup('steam');
+  [[322, 240, ''], [640, 240, 'd1']].forEach(([x, y, c]) => {
+    const s = el('g', { class: `float ${c}` }, g);
+    el('path', { d: `M${x} ${y} q-10 -12 0 -24 q10 -12 0 -24`, stroke: '#A9ADC4', 'stroke-width': 6, fill: 'none', 'stroke-linecap': 'round' }, s);
+  });
+}
+
+// ---------- motor ----------
+const spring = (x = 0, k = 60, c = 12) => ({ x, v: 0, to: x, k, c });
+const step = (s, dt) => { s.v += ((s.to - s.x) * s.k - s.v * s.c) * dt; s.x += s.v * dt; };
+const S = {
+  tilt: spring(), headY: spring(), lookX: spring(0, 120, 16), lookY: spring(0, 120, 16),
+  eyeS: spring(1, 260, 14), blush: spring(0, 40, 12),
+};
+
+let mood = 'idle', since = 0;
+let talkLevel = null;                 // volumen de su voz mientras habla (mueve la boca)
+let talkShape = null;                 // forma de la boca según el sonido: 'open' (a/e), 'o' (o/u), 'small'
+function applyMouth(kind) {
+  show(cover, !!kind); show(stem, !!kind && kind !== 'open');
+  for (const [k, n] of Object.entries(mouths)) show(n, k === kind);
+}
+function setMood(m) {
+  mood = m; since = 0;
+  const C = MOODS[m];
+  for (const eye of eyes) {
+    show(eye.open, C.eyes === 'open'); show(eye.happy, C.eyes === 'happy');
+    show(eye.closed, C.eyes === 'closed'); show(eye.heart, C.eyes === 'heart');
+    setLid(eye, C.lid);
+  }
+  applyMouth(C.mouth);
+  for (const [k, g] of Object.entries(FX)) {
+    g.classList.toggle('on', k === C.fx);
+    if (k === C.fx) g.querySelectorAll('*').forEach(n => { n.style.animation = 'none'; n.getBBox(); n.style.animation = ''; });
+  }
+  S.eyeS.x = .55;                       // pequeño rebote al cambiar de expresión
+  S.tilt.v += (Math.random() < .5 ? -1 : 1) * 25;
+  for (const b of buttons) b.setAttribute('aria-pressed', b.dataset.mood === m);
+}
+
+let pointer = null, pointerAt = -10, nextGlance = 1, glance = [0, 0], blinkT = -1, nextBlink = 2, t = 0, last = performance.now();
+function setPointer(clientX, clientY) {
+  const r = $('panda').getBoundingClientRect();
+  pointer = [
+    Math.max(-1, Math.min(1, (clientX - (r.left + r.width / 2)) / (r.width * 0.6))),
+    Math.max(-1, Math.min(1, (clientY - (r.top + r.height * 0.36)) / (r.height * 0.6))),
+  ];
+  pointerAt = t;
+}
+if (!DESKTOP) addEventListener('pointermove', (ev) => setPointer(ev.clientX, ev.clientY));
+
+const [px, py] = rig.pivot;
+const elAll = $('all'), elHead = $('head');
+
+// gestos: window.gesture('nod' | 'shake' | 'hop' | 'stretch' | 'yawn')
+const GESTURES = { nod: .9, shake: .9, hop: .9, stretch: 1.4, yawn: 1.8, wave: 1.8 };
+let G = null, nextGesture = 40;
+const paw = $('paw');
+function gesture(name) {
+  if (!GESTURES[name]) return;
+  if (G && G.name === 'wave') paw.style.display = 'none';
+  G = { name, t: 0, dur: GESTURES[name] };
+}
+window.gesture = gesture;
+
+// pasear por la barra de tareas: se balancea hacia donde va
+let walking = false, walkDir = 1;
+window.setWalking = (on, dir) => { walking = !!on; walkDir = dir || 1; };
+
+// gorritos: Navidad (diciembre), Halloween (25-31 oct) y tu cumpleaños (la app agrega body.birthday)
+function costume() {
+  const d = new Date(), m = d.getMonth() + 1, day = d.getDate();
+  const kind = document.body.classList.contains('birthday') ? 'party' : m === 12 ? 'santa' : (m === 10 && day >= 25) ? 'witch' : null;
+  for (const h of document.querySelectorAll('#hats > g')) h.style.display = h.id === `hat-${kind}` ? '' : 'none';
+}
+costume();
+new MutationObserver(costume).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+setInterval(costume, 3600e3);
+const FRAME_MS = DESKTOP ? 1000 / 30 : 0;   // en el escritorio bastan 30 fps (la mitad de CPU)
+let lastFrame = 0;
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (now - lastFrame < FRAME_MS - 1) return;
+  lastFrame = now;
+  const dt = Math.min((now - last) / 1000, 1 / 15);
+  last = now; t += dt; since += dt;
+  const C = MOODS[mood];
+
+  let gx = 0, gy = 0;
+  if (!C.look) {
+    if (pointer && t - pointerAt < 2.5) [gx, gy] = pointer;
+    else {
+      if (t > nextGlance) { glance = [(Math.random() * 2 - 1) * .8, (Math.random() * 2 - 1) * .5]; nextGlance = t + 1.5 + Math.random() * 3; }
+      [gx, gy] = glance;
+    }
+  }
+  const [tilt, hy] = C.head;
+  const idleSway = Math.sin(t * (C.slow ? .6 : .9)) * (C.slow ? 2 : 1.1);
+  S.tilt.to = tilt + gx * 3.2 + idleSway + (C.wiggle ? Math.sin(t * 7) * C.wiggle : 0) + (C.sway ? Math.sin(t * 2.2) * C.sway : 0);
+  S.headY.to = hy + gy * 3 + Math.sin(t * (C.slow ? 1 : 1.8)) * (C.slow ? 3 : 1.6) + (C.wiggle ? -Math.abs(Math.sin(t * 7)) * 3 : 0);
+  if (mood === 'surprised' && since < .6) S.tilt.to += Math.sin(since * 40) * 3 * (1 - since / .6);
+  S.lookX.to = C.look ? C.look[0] : gx * 7;
+  S.lookY.to = C.look ? C.look[1] : gy * 4;
+  S.eyeS.to = C.eyeScale ?? 1;
+  S.blush.to = C.blush;
+  // gestos cortos encima del ánimo: asentir, negar, saltar, estirarse, bostezar
+  let hopY = 0, stretch = 0;
+  if (G) {
+    G.t += dt;
+    const k = Math.max(0, 1 - G.t / G.dur);
+    if (G.name === 'nod') S.headY.to += Math.sin(G.t * 16) * 7 * k;
+    else if (G.name === 'shake') S.tilt.to += Math.sin(G.t * 18) * 7 * k;
+    else if (G.name === 'hop') hopY = -Math.abs(Math.sin(G.t * Math.PI / 0.45)) * 22 * k;
+    else if (G.name === 'stretch') { stretch = Math.sin(Math.PI * G.t / G.dur) * 0.05; S.headY.to -= stretch * 120; }
+    else if (G.name === 'yawn') { S.eyeS.to = 0.35; S.headY.to -= Math.sin(Math.PI * G.t / G.dur) * 6; if (talkLevel === null) applyMouth(G.t < G.dur - 0.2 ? 'open' : MOODS[mood].mouth); }
+    if (G.name === 'wave') {
+      paw.style.display = '';
+      paw.setAttribute('transform', `rotate(${(Math.sin(G.t * 11) * 22 * Math.min(1, (G.dur - G.t) * 3)).toFixed(1)} 786 780)`);
+    }
+    if (G.t >= G.dur) { if (G.name === 'wave') paw.style.display = 'none'; G = null; }
+  } else if (walking) {
+    hopY = -Math.abs(Math.sin(t * 9)) * 7;
+    S.tilt.to += walkDir * 5 + Math.sin(t * 9) * 2.5;
+  } else if (mood === 'idle' && t > nextGesture) {
+    nextGesture = t + 35 + Math.random() * 40;
+    gesture(['nod', 'hop', 'stretch', 'yawn'][Math.floor(Math.random() * 4)]);
+  }
+  for (const s of Object.values(S)) step(s, dt);
+
+  if (t > nextBlink) { blinkT = 0; nextBlink = t + 2.4 + Math.random() * 3.5; if (Math.random() < .2) nextBlink = t + .35; }
+  let lid = 1;
+  if (blinkT >= 0) { blinkT += dt; lid = Math.min(1, Math.abs(1 - blinkT / .075)); if (blinkT > .15) blinkT = -1; }
+
+  const breath = Math.sin(t * (C.slow ? 1.2 : 2)) * (C.slow ? .01 : .006);
+  elAll.setAttribute('transform', `translate(0 ${hopY.toFixed(2)}) translate(${px} 905) scale(${1 + breath - stretch / 3} ${1 - breath + stretch}) translate(${-px} -905)`);
+  elHead.setAttribute('transform', `translate(0 ${S.headY.x.toFixed(2)}) rotate(${S.tilt.x.toFixed(2)} ${px} ${py})`);
+  for (const { g, look, e } of eyes) {
+    const sc = Math.max(.2, S.eyeS.x), sy = sc * (C.eyes === 'open' ? Math.max(lid, .06) : 1);
+    const by = e.cy + e.ry;
+    g.setAttribute('transform', `translate(${e.cx} ${by}) scale(${sc.toFixed(3)} ${sy.toFixed(3)}) translate(${-e.cx} ${-by})`);
+    look.setAttribute('transform', `translate(${S.lookX.x.toFixed(2)} ${S.lookY.x.toFixed(2)})`);
+  }
+  for (const b of blushEls) b.setAttribute('opacity', Math.max(0, S.blush.x * .75).toFixed(3));
+  if (talkLevel !== null) applyMouth(talkShape || (talkLevel > .05 ? 'open' : 'small'));
+}
+
+// ---------- botones ----------
+const nav = $('moods');
+const buttons = Object.entries(MOODS).map(([k, m]) => {
+  const b = document.createElement('button');
+  b.textContent = m.label;
+  b.dataset.mood = k;
+  b.onclick = () => { stopDemo(); setMood(k); };
+  nav.append(b);
+  return b;
+});
+const demoBtn = document.createElement('button');
+demoBtn.className = 'demo'; demoBtn.textContent = '▶ Demo';
+nav.append(demoBtn);
+let demo = null;
+function stopDemo() { clearInterval(demo); demo = null; demoBtn.textContent = '▶ Demo'; }
+demoBtn.onclick = () => {
+  if (demo) return stopDemo();
+  const keys = Object.keys(MOODS);
+  let i = keys.indexOf(mood);
+  demoBtn.textContent = '■ Detener';
+  demo = setInterval(() => setMood(keys[i = (i + 1) % keys.length]), 2600);
+};
+
+setMood('idle');
+requestAnimationFrame(frame);
+window.setMood = setMood;
+</script>
+<script src="desktop.js"></script>
+</body>
+</html>
